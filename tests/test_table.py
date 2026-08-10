@@ -52,3 +52,14 @@ def test_table_persists_records_between_instances(tmp_path):
     second_table = db.table("users")
 
     assert second_table.select_all() == [{"username": "bob", "id": user_id}]
+
+
+def test_table_handles_refresh_before_writes(tmp_path):
+    db = connect(str(tmp_path))
+    first_table = db.table("users")
+    second_table = db.table("users")
+
+    first_id = first_table.insert({"username": "first"})
+    second_id = second_table.insert({"username": "second"})
+
+    assert {record["id"] for record in first_table.select_all()} == {first_id, second_id}

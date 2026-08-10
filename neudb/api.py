@@ -5,6 +5,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from . import ai_schema
@@ -77,10 +78,60 @@ def create_app(db_dir: Optional[str] = None, api_key: Optional[str] = None) -> F
     db = ai_schema.init_ai_database(db_path)
     app = FastAPI(title="neuDB API", version="0.4.1")
     app.state.db = db
+    cors_origins = [origin.strip() for origin in os.environ.get(
+        "NEUDB_CORS_ORIGINS", "http://127.0.0.1:8080,http://localhost:8080"
+    ).split(",") if origin.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.get("/health")
     def health():
         return {"status": "ok", "auth_configured": expected_api_key is not None}
+
+    @app.get("/tables", dependencies=[Depends(require_api_key)])
+    def list_tables():
+        return {"tables": db.list_tables()}
+
+    @app.post("/tables", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_api_key)])
+    def create_table(payload: Dict[str, str]):
+        name = payload.get("name", "")
+        db.table(name)  # Validate the name before creating it.
+        db.create_table(name)
+        return {"name": name}
+
+    @app.get("/tables/{table_name}/records", dependencies=[Depends(require_api_key)])
+    def list_records(table_name: str, limit: int = 100, offset: int = 0):
+        if limit < 1 or limit > 1000 or offset < 0:
+            raise HTTPException(status_code=400, detail="limit must be 1-1000 and offset must be non-negative.")
+        records = db.table(table_name).select_all()
+        return {"records": records[offset:offset + limit], "total": len(records)}
+
+    @app.post("/tables/{table_name}/records", status_code=status.HTTP_201_CREATED,
+              dependencies=[Depends(require_api_key)])
+    def insert_record(table_name: str, record: Dict[str, Any]):
+        record_id = db.table(table_name).insert(record)
+        return {"id": record_id, "record": _record_by_id(db, table_name, record_id)}
+
+    @app.patch("/tables/{table_name}/records/{record_id}", dependencies=[Depends(require_api_key)])
+    def update_record(table_name: str, record_id: str, updates: Dict[str, Any]):
+        table = db.table(table_name)
+        if not table.exists(record_id):
+            raise HTTPException(status_code=404, detail="Record not found")
+        table.update(record_id, updates)
+        return {"record": _record_by_id(db, table_name, record_id)}
+
+    @app.delete("/tables/{table_name}/records/{record_id}", dependencies=[Depends(require_api_key)])
+    def delete_record(table_name: str, record_id: str):
+        table = db.table(table_name)
+        if not table.exists(record_id):
+            raise HTTPException(status_code=404, detail="Record not found")
+        table.delete(record_id)
+        return {"deleted": record_id}
 
     @app.post("/users", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_api_key)])
     def create_user(payload: UserCreate):

@@ -83,6 +83,15 @@ class Table:
                 with open(self.path, 'r', encoding="utf-8") as f:
                     self._data = json.load(f)
 
+    def _reload(self):
+        """Refresh this handle so multiple Table instances do not go stale."""
+        if not self.path.exists():
+            self._data = {}
+            return
+        with _lock_for_path(self.path):
+            with open(self.path, 'r', encoding="utf-8") as f:
+                self._data = json.load(f)
+
     def _save(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
         lock = _lock_for_path(self.path)
@@ -106,11 +115,15 @@ class Table:
 
     def insert(self, record: dict) -> str:
         """Insert a record. If no 'id' field, auto-generate UUID."""
-        id = record.get("id") or str(uuid.uuid4())
-        record["id"] = id
-        self._data[id] = record
-        self._save()
-        return id
+        if not isinstance(record, dict):
+            raise TypeError("record must be a dictionary")
+        with _lock_for_path(self.path):
+            self._reload()
+            id = record.get("id") or str(uuid.uuid4())
+            record["id"] = id
+            self._data[id] = record
+            self._save()
+            return id
 
     def insert_with_embedding(self, record: dict, embedding: List[float]) -> str:
         """Insert a record and attach an embedding vector."""
@@ -118,26 +131,40 @@ class Table:
         return self.insert(record)
 
     def select_all(self) -> List[dict]:
+        self._reload()
         return list(self._data.values())
 
     def select_by(self, key: str, value: str) -> List[dict]:
+        validate_identifier(key, "field name")
+        self._reload()
         return [r for r in self._data.values() if str(r.get(key)) == value]
 
     def update(self, id: str, updates: dict):
-        if id in self._data:
-            self._data[id].update(updates)
-            self._save()
+        if not isinstance(updates, dict):
+            raise TypeError("updates must be a dictionary")
+        with _lock_for_path(self.path):
+            self._reload()
+            if id in self._data:
+                self._data[id].update(updates)
+                self._save()
 
     def delete(self, id: str):
-        if id in self._data:
-            del self._data[id]
-            self._save()
+        with _lock_for_path(self.path):
+            self._reload()
+            if id in self._data:
+                del self._data[id]
+                self._save()
 
     def exists(self, id: str) -> bool:
+        self._reload()
         return id in self._data
 
     def search_similar(self, field: str, query_vector: List[float], top_k: int = 5) -> List[dict]:
         """Return top_k records sorted by cosine similarity of 'field' to query_vector."""
+        validate_identifier(field, "field name")
+        if top_k < 1:
+            return []
+        self._reload()
         results = []
         for record in self._data.values():
             vec = record.get(field)
@@ -153,6 +180,10 @@ class Table:
 
     def search_text(self, field: str, query: str, top_k: int = 5) -> List[dict]:
         """Return top_k records where field contains query, case-insensitive."""
+        validate_identifier(field, "field name")
+        if top_k < 1:
+            return []
+        self._reload()
         query_text = query.lower()
         if not query_text:
             return []
@@ -179,6 +210,12 @@ class Database:
 
     def table(self, name: str) -> Table:
         return Table(self._table_path(name))
+
+    def list_tables(self) -> List[str]:
+        """Return table names currently present in this database directory."""
+        if not self.db_dir.exists():
+            return []
+        return sorted(path.stem for path in self.db_dir.glob("*.json") if path.is_file())
 
     def create_table(self, name: str):
         """Create a new table (just create an empty file)."""

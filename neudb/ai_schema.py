@@ -1,14 +1,15 @@
-# neudb/ai_schema.py — AI memory helpers for neuDB
+"""AI memory helpers for neuDB.
+
+The embedding library is intentionally discovered and imported only when an
+embedding is requested. This keeps the core API and dashboard fast to start.
+"""
+
+import importlib.util
+
 from . import connect
 
-try:
-    from sentence_transformers import SentenceTransformer
-    EMBEDDING_AVAILABLE = True
-except ImportError:
-    SentenceTransformer = None
-    EMBEDDING_AVAILABLE = False
-    print("sentence-transformers not installed. Embeddings disabled.")
-
+SentenceTransformer = None
+EMBEDDING_AVAILABLE = importlib.util.find_spec("sentence_transformers") is not None
 EMBED_MODEL = None
 
 
@@ -18,6 +19,13 @@ def get_embedding_model():
     if not EMBEDDING_AVAILABLE:
         return None
     if EMBED_MODEL is None:
+        global SentenceTransformer
+        if SentenceTransformer is None:
+            try:
+                from sentence_transformers import SentenceTransformer as Transformer
+            except ImportError:
+                return None
+            SentenceTransformer = Transformer
         EMBED_MODEL = SentenceTransformer('all-MiniLM-L6-v2')
     return EMBED_MODEL
 

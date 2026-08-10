@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>neuDB Dashboard</title>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html"><img src="assets/logo.svg" alt="neuDB"></a>
+    <span class="eyebrow">LOCAL DATABASE DASHBOARD</span>
+    <div class="connection"><span id="connection-dot" class="dot"></span><span id="connection-label">Not connected</span></div>
+  </header>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="sidebar-heading"><span>Tables</span><button id="new-table" class="icon-button" title="Create table">＋</button></div>
+      <div id="table-list" class="table-list"><p class="muted">Connect to load tables.</p></div>
+      <div class="sidebar-help"><strong>Everything is local.</strong><br>Records are stored as readable JSON files in your database folder.</div>
+    </aside>
+
+    <main class="content">
+      <section id="welcome" class="welcome">
+        <div class="welcome-mark">n<span>•</span></div>
+        <h1>Your data, without the friction.</h1>
+        <p>Connect to a neuDB API, choose a table, and manage records with a friendly interface.</p>
+        <button id="open-connection" class="button primary">Connect database</button>
+      </section>
+
+      <section id="workspace" hidden>
+        <div class="page-heading">
+          <div><p class="eyebrow">TABLE</p><h1 id="table-title">—</h1><p id="record-count" class="muted">0 records</p></div>
+          <button id="add-record" class="button primary">＋ Add record</button>
+        </div>
+        <div class="toolbar">
+          <label class="search"><span>⌕</span><input id="record-search" placeholder="Filter records…" autocomplete="off"></label>
+          <button id="refresh" class="button secondary">Refresh</button>
+        </div>
+        <div id="notice" class="notice" hidden></div>
+        <div class="table-wrap"><table><thead id="records-head"></thead><tbody id="records-body"></tbody></table><div id="empty-state" class="empty" hidden>No records yet. Add the first one.</div></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="connection-dialog">
+    <form method="dialog" id="connection-form" class="dialog-card">
+      <button type="button" class="dialog-close" data-close>×</button>
+      <p class="eyebrow">CONNECTION</p><h2>Connect to neuDB</h2>
+      <p class="muted">Run <code>uvicorn neudb.api:app --reload</code> locally, then enter its details.</p>
+      <label>API URL<input id="api-url" value="http://127.0.0.1:8000" required></label>
+      <label>API key<input id="api-key" type="password" placeholder="Your NEUDB_API_KEY" required></label>
+      <div class="dialog-actions"><button type="button" class="button secondary" data-close>Cancel</button><button class="button primary">Connect</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="record-dialog">
+    <form method="dialog" id="record-form" class="dialog-card wide">
+      <button type="button" class="dialog-close" data-close>×</button>
+      <p class="eyebrow" id="record-mode">NEW RECORD</p><h2 id="record-dialog-title">Add record</h2>
+      <p class="muted">Enter a JSON object. The <code>id</code> is generated automatically.</p>
+      <textarea id="record-json" spellcheck="false" required>{
+  "content": ""
+}</textarea>
+      <div class="dialog-actions"><button type="button" class="button secondary" data-close>Cancel</button><button class="button primary">Save record</button></div>
+    </form>
+  </dialog>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

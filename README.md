@@ -106,6 +106,18 @@ uvicorn neudb.api:app --reload
 
 Swagger UI: http://127.0.0.1:8000/docs
 
+### Browser dashboard
+
+neuDB includes a local dashboard for users who prefer a visual interface:
+
+```bash
+export NEUDB_API_KEY="change-me"
+uvicorn neudb.api:app --reload
+cd website && python3 -m http.server 8080
+```
+
+Open http://127.0.0.1:8080/dashboard.html to create tables, browse/filter records, and add, edit, or delete JSON records.
+
 ```bash
 curl -X POST http://127.0.0.1:8000/users \
   -H 'Content-Type: application/json' \
@@ -117,6 +129,7 @@ curl -X POST http://127.0.0.1:8000/users \
 |----------|---------|---------|
 | `NEUDB_API_KEY` | *(required)* | Auth for all DB endpoints |
 | `NEUDB_API_DB` | `neudb_api_data/` | API storage directory |
+| `NEUDB_CORS_ORIGINS` | `http://127.0.0.1:8080,http://localhost:8080` | Comma-separated dashboard origins |
 
 ## Agent
 

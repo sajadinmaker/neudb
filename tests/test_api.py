@@ -103,3 +103,29 @@ def test_api_search_falls_back_to_text_when_embeddings_are_unavailable(tmp_path,
 
     assert response.status_code == 200
     assert response.json()["results"] == [matching.json()["message"]]
+
+
+def test_api_dashboard_table_and_record_crud(tmp_path):
+    client = TestClient(create_app(str(tmp_path), api_key=API_KEY))
+
+    create_table = client.post("/tables", headers=AUTH_HEADERS, json={"name": "notes"})
+    assert create_table.status_code == 201
+    assert "notes" in client.get("/tables", headers=AUTH_HEADERS).json()["tables"]
+
+    created = client.post("/tables/notes/records", headers=AUTH_HEADERS, json={"title": "hello"})
+    assert created.status_code == 201
+    record_id = created.json()["id"]
+
+    updated = client.patch(
+        f"/tables/notes/records/{record_id}", headers=AUTH_HEADERS, json={"title": "updated"}
+    )
+    assert updated.status_code == 200
+    assert updated.json()["record"]["title"] == "updated"
+
+    listed = client.get("/tables/notes/records", headers=AUTH_HEADERS).json()
+    assert listed["total"] == 1
+    assert listed["records"][0]["title"] == "updated"
+
+    deleted = client.delete(f"/tables/notes/records/{record_id}", headers=AUTH_HEADERS)
+    assert deleted.status_code == 200
+    assert client.get("/tables/notes/records", headers=AUTH_HEADERS).json()["total"] == 0
