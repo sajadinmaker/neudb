@@ -44,6 +44,10 @@
 | **AI memory schema** | Users, sessions, messages, tags, memories |
 | **Three interfaces** | Python library, CLI, optional HTTP API + agent |
 
+## Why neuDB?
+
+Prototypes and agents need small persistent memory without running a server: a folder of JSON tables with atomic writes, thread-safe single-process access, and built-in text + cosine-similarity search. neuDB solves that narrow problem — dependency-free core (`dependencies = []`), human-readable files, optional FastAPI and LLM-memory layers as extras. It is not a general database: no indexes, no transactions, no multi-process safety (see Concurrency and Failure Recovery).
+
 ## Architecture
 
 ```text
