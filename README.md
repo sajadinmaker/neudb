@@ -5,7 +5,7 @@
 <h1 align="center">neuDB</h1>
 
 <p align="center">
-  <strong>AI-native database for everything you remember.</strong><br>
+  <strong>Embedded Python database engine with persistent storage, semantic search, and AI memory capabilities.</strong><br>
   Zero dependencies · Human-readable JSON · Semantic search built in
 </p>
 
@@ -19,7 +19,7 @@
   <a href="https://pypi.org/project/neudb/"><img src="https://img.shields.io/pypi/v/neudb.svg" alt="PyPI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.8+-blue.svg" alt="Python 3.8+"></a>
-  <a href="https://github.com/neuralbroker/neudb/actions"><img src="https://img.shields.io/badge/tests-24%20passing-brightgreen" alt="Tests"></a>
+  <a href="https://github.com/neuralbroker/neudb/actions"><img src="https://github.com/neuralbroker/neudb/actions/workflows/test.yml/badge.svg" alt="CI"></a>
 </p>
 
 <p align="center">
@@ -43,6 +43,71 @@
 | **Text fallback** | Case-insensitive search when embeddings are off |
 | **AI memory schema** | Users, sessions, messages, tags, memories |
 | **Three interfaces** | Python library, CLI, optional HTTP API + agent |
+
+## Architecture
+
+```text
+Python library / CLI
+        ↓
+Table (one JSON file per table, {id: record})
+        ↓
+Database (directory of tables, atomic file replace on write)
+        ↓
+Optional FastAPI (neudb/api.py, X-API-Key) → Browser dashboard
+        ↓
+Optional memory agent (neudb/agent.py, Ollama/OpenAI) + embeddings
+```
+
+Core engine: `neudb/__init__.py` (`Database`, `Table`, `cosine_similarity`, CLI).
+HTTP layer: `neudb/api.py` (`create_app`, health/tables/records/users/sessions/messages/search).
+Memory schema: `neudb/ai_schema.py` (`users`, `sessions`, `messages`, `tags`, `memories`).
+See [docs/architecture.md](docs/architecture.md) for details.
+
+## Storage Model
+
+* One directory per database; one JSON file per table (`{id: record}`, indented JSON).
+* Table names restricted to `^[A-Za-z0-9_]+$` with parent-directory check against traversal.
+* Writes use same-directory temp file + `flush` + `os.fsync` + `os.replace` (atomic replace on POSIX).
+* No server, no config; `cat` the JSON files to debug.
+* No indexes; reads load the full table file into memory. See [docs/storage.md](docs/storage.md).
+
+## Concurrency
+
+* Same-process thread safety via per-path `threading.RLock` (`insert`/`update`/`delete` reload-then-write under lock).
+* No multi-process file locking (`fcntl`/`flock`), no WAL, no transactions.
+* Concurrent writes from multiple processes are not safe; concurrent threads are serialized per table file.
+* See [docs/concurrency.md](docs/concurrency.md).
+
+## Search
+
+* `search_text(field, query)`: case-insensitive substring scan, pure Python.
+* `search_similar(field, vector, top_k)`: brute-force cosine similarity scan over stored embedding lists.
+* Embeddings are optional (`sentence-transformers/all-MiniLM-L6-v2` via `embed_text`); when unavailable, text fallback is used.
+* All queries are full in-memory scans; there is no vector index. See [docs/search.md](docs/search.md).
+
+## Failure Recovery
+
+* Interrupted writes are mitigated by temp-file + atomic replace (original file stays intact if the process crashes mid-write; leftover `.*.tmp` files are unlinked on next save attempt).
+* Corrupted JSON is not repaired: `_load` raises on invalid JSON; there are no checksums, backups, or repair tools.
+* No concurrent-write, corruption, or crash-recovery tests yet — see Testing below.
+* See [docs/recovery.md](docs/recovery.md).
+
+## Benchmarks
+
+No published benchmarks yet. Do not cite latency/throughput numbers for neuDB — none have been measured in this repository.
+
+To add one, measure and report: insert throughput, point-read latency, `search_text`/`search_similar` latency at 10K and 100K records, and concurrent-thread write behavior. See [docs/performance.md](docs/performance.md) for the protocol.
+
+## Testing
+
+```bash
+pip install -e ".[test,api]"
+pytest
+```
+
+Covered today (`tests/test_table.py`, `test_search.py`, `test_api.py`, `test_ai_schema.py`, `test_agent.py`): CRUD round-trips, persistence across instances, stale-handle reload, cosine/text edge cases, API auth + user/session/message flow + pagination, memory schema upserts, agent context formatting, Ollama remote-URL guard.
+
+Not yet covered: threaded concurrent writes, lock contention, duplicate writes under concurrency, corrupted-file handling, interrupted-write recovery, performance/load. Contributions adding those tests are welcome — see [docs/decisions.md](docs/decisions.md).
 
 ## Quick start
 
@@ -166,7 +231,7 @@ neudb/
 │   ├── ai_schema.py    # AI memory helpers
 │   ├── api.py          # FastAPI HTTP API
 │   └── agent.py        # LLM memory agent
-├── tests/              # pytest suite (24 tests)
+├── tests/              # pytest suite (see tests/)
 ├── demos/              # Example scripts
 ├── docs/
 ├── website/            # Product landing page (local)
