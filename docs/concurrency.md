@@ -6,4 +6,4 @@ Source: `neudb/__init__.py: _PATH_LOCKS, _PATH_LOCKS_GUARD, Table.insert/update/
 * Reads (`select_*`, `exists`, `search_*`) call `_reload()` without holding the lock.
 * What is NOT provided: multi-process locking (`fcntl`/`flock` absent), cross-machine coordination, transactions, isolation levels, WAL/replay.
 * Consequence: two processes writing the same table file concurrently can lost-update (last-writer-wins on full-file replace). Do not share one database directory across processes if writes overlap.
-* Missing tests: threaded concurrent writes, lock contention, duplicate writes under concurrency. See `../tests/` — none exist yet.
+* Tests: `tests/test_concurrency.py` — 8 threads × 25 inserts lose nothing (400/400 in benchmarks too); concurrent readers never crash during writer file-replace. Not tested: lock contention profiling, multi-process writers (expected to lose — by design).

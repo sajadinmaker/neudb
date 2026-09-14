@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
-neuDB - A tiny, file-based, AI-friendly database with zero dependencies.
-Now with built-in semantic search via cosine similarity.
+neuDB - lightweight embedded Python storage experiment (zero dependencies).
+
+One JSON file per table ({id: record}), atomic writes via temp + fsync +
+os.replace, per-path threading.RLock (same process only), brute-force text +
+cosine search. NOT a server, index, or PostgreSQL replacement.
 
 Usage as CLI:
   python neudb.py table create <name>
@@ -15,8 +18,8 @@ Usage as library:
   db = neudb.connect("mydata")
   users = db.table("users")
   users.insert({"username": "alice"})
-  users.insert_with_embedding("doc1", {"text":"hello"}, [0.1,0.2])
-  results = users.search_similar("embedding", [0.1,0.2])
+  users.insert({"text": "hello", "embedding": [0.1, 0.2]})
+  results = users.search_similar("embedding", [0.1, 0.2])
 """
 
 import json
@@ -34,6 +37,19 @@ from typing import Dict, List
 _IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9_]+$")
 _PATH_LOCKS = {}
 _PATH_LOCKS_GUARD = threading.Lock()
+
+
+class CorruptedTableError(ValueError):
+    """Raised when a table file exists but is not valid JSON.
+
+    Subclasses ValueError so existing `except ValueError` callers keep working,
+    while new code can catch the specific case and decide (restore from backup,
+    quarantine the file, abort). The offending path is on `.path`.
+    """
+
+    def __init__(self, path: Path, message: str):
+        self.path = path
+        super().__init__(f"{message}: {path}")
 
 
 def validate_identifier(value: str, label: str = "identifier") -> str:
@@ -77,11 +93,58 @@ class Table:
         self._data: Dict[str, dict] = {}
         self._load()
 
+    def sweep_orphan_tmps(self, max_age_seconds: float = 300) -> list[str]:
+        """Remove stray temp files from interrupted `_save` calls.
+
+        Explicit maintenance — deliberately NOT run on open: a concurrent
+        writer in another thread/process may have a live temp file with the
+        same pattern, and deleting it mid-write corrupts that write
+        (found by tests/test_concurrency.py: sweep-on-open deleted a live
+        temp and the writer's os.replace failed with FileNotFoundError).
+        Only files older than max_age_seconds are removed. Returns basenames.
+        """
+        import time
+
+        removed: list[str] = []
+        try:
+            parent = self.path.parent
+            if not parent.exists():
+                return removed
+            now = time.time()
+            for tmp in parent.glob(f".{self.path.name}.*.tmp"):
+                try:
+                    if now - tmp.stat().st_mtime < max_age_seconds:
+                        continue
+                    tmp.unlink()
+                    removed.append(tmp.name)
+                except OSError:
+                    pass
+        except OSError:
+            pass
+        return removed
+
+    def _read_file(self) -> Dict[str, dict]:
+        try:
+            with open(self.path, 'r', encoding="utf-8") as f:
+                data = json.load(f)
+        except json.JSONDecodeError as exc:
+            raise CorruptedTableError(
+                self.path, f"table file is not valid JSON ({exc})"
+            ) from exc
+        except UnicodeDecodeError as exc:
+            raise CorruptedTableError(
+                self.path, f"table file is not valid UTF-8 ({exc})"
+            ) from exc
+        if not isinstance(data, dict):
+            raise CorruptedTableError(
+                self.path, f"table file must contain a JSON object, got {type(data).__name__}"
+            )
+        return data
+
     def _load(self):
         if self.path.exists():
             with _lock_for_path(self.path):
-                with open(self.path, 'r', encoding="utf-8") as f:
-                    self._data = json.load(f)
+                self._data = self._read_file()
 
     def _reload(self):
         """Refresh this handle so multiple Table instances do not go stale."""
@@ -89,8 +152,7 @@ class Table:
             self._data = {}
             return
         with _lock_for_path(self.path):
-            with open(self.path, 'r', encoding="utf-8") as f:
-                self._data = json.load(f)
+            self._data = self._read_file()
 
     def _save(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)

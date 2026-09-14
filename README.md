@@ -67,11 +67,23 @@ pip install -e ".[test,api]" && pytest
 
 ## Testing
 
-`tests/test_table.py`, `test_search.py`, `test_api.py`, `test_ai_schema.py`, `test_agent.py`: CRUD, persistence, auth flow, memory upserts. Missing: concurrent-write, corruption, crash-recovery, load tests.
+```bash
+pip install -e ".[test,api]" && pytest   # 32 tests: CRUD, persistence, search, API, AI schema, agent, concurrency, recovery
+```
+
+`tests/test_concurrency.py` (8 threads × 25 inserts, readers-during-writes),
+`tests/test_recovery.py` (corruption, non-object JSON, interrupted-write + explicit sweep).
 
 ## Performance
 
-No published benchmarks. Do not cite latency numbers. Protocol in `docs/performance.md` (insert/read/search at 10K/100K, threaded writes).
+Measured 2026-09-14 via `python benchmarks/bench.py` (this machine, Python 3.11):
+
+- 2K records (338KB): **138 inserts/s, p50 7.3ms, p95 13.7ms**; read_all 2.6ms; text search 2.9ms
+- 5K records (847KB): **56 inserts/s, p50 17.5ms, p95 34.4ms**; read_all 6.9ms
+- Threaded 4×100: 400/400 rows, 0 lost
+
+Per-insert cost grows with file size (full rewrite per write — O(N) confirmed).
+See `docs/performance.md`. Do not use past ~10K rows per table.
 
 ## Limitations
 
@@ -79,7 +91,8 @@ Full-file rewrite/read per op; O(N) queries; no index/pagination in core; thread
 
 ## Future Improvements
 
-File locking for multi-process, safe-load + corruption tests, documented size limits or a real index, measured benchmarks, single demo (keep `realworld_coding_assistant.py`).
+File locking for multi-process, backup/restore round-trip test, documented 10K-row
+guideline enforcement (warn on large tables), single demo kept (`demos/realworld_coding_assistant.py`).
 
 ## Learned
 

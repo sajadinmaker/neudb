@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "neudb"
 version = "0.4.1"
-description = "A tiny, file-based, AI-native database engine with semantic search"
+description = "Lightweight embedded Python storage experiment (JSON tables, atomic writes, search)"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.8"
 authors = [{ name = "Abdulla Sajad" }]
-keywords = ["database", "ai", "embeddings", "semantic-search", "agents", "json", "memory"]
+keywords = ["database", "storage", "embeddings", "json", "persistence"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
