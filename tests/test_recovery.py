@@ -1,7 +1,5 @@
 """Recovery: corruption surfaces cleanly, interrupted writes can't half-apply."""
 
-import json
-
 import pytest
 
 from neudb import CorruptedTableError, connect
