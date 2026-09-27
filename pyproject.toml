@@ -32,11 +32,11 @@ embeddings = ["sentence-transformers>=2.0"]
 test = ["fastapi>=0.110", "httpx>=0.27", "pytest>=8.0"]
 
 [project.urls]
-Homepage = "https://github.com/neuralbroker/neudb"
-Documentation = "https://github.com/neuralbroker/neudb#readme"
-Repository = "https://github.com/neuralbroker/neudb"
-Changelog = "https://github.com/neuralbroker/neudb/blob/main/CHANGELOG.md"
-Issues = "https://github.com/neuralbroker/neudb/issues"
+Homepage = "https://github.com/sajadinmaker/neudb"
+Documentation = "https://github.com/sajadinmaker/neudb#readme"
+Repository = "https://github.com/sajadinmaker/neudb"
+Changelog = "https://github.com/sajadinmaker/neudb/blob/main/CHANGELOG.md"
+Issues = "https://github.com/sajadinmaker/neudb/issues"
 
 [project.scripts]
 neudb = "neudb:main"
