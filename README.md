@@ -97,3 +97,9 @@ guideline enforcement (warn on large tables), single demo kept (`demos/realworld
 ## Learned
 
 ~450 lines of stdlib suffice for the experiment; the API/agent/dashboard/website layers hid that simplicity and should stay examples, not core.
+
+---
+
+## Maintenance
+
+Last maintained: 2026-09-30 – minor docs touch.
