@@ -8,7 +8,7 @@ Local prototypes and agents need inspectable persistence without running Postgre
 
 ## Solution
 
-A zero-dependency folder of human-readable JSON tables with atomic writes and pure-Python text + cosine search. Install from source (see Running Locally).
+A zero-dependency folder of human-readable JSON tables with atomic writes and pure-Python text + cosine search. Install from source (see Running Locally). Promo site: https://sajadinmaker.github.io/neudb/
 
 ## What it is / is NOT
 
@@ -102,4 +102,4 @@ guideline enforcement (warn on large tables), single demo kept (`demos/realworld
 
 ## Maintenance
 
-Last maintained: 2026-09-30 – minor docs touch.
+Last maintained: 2026-10-26 – PyPI distribution retired (claims scrubbed); flake8 clean; promo site live.
