@@ -8,7 +8,7 @@ Local prototypes and agents need inspectable persistence without running Postgre
 
 ## Solution
 
-A zero-dependency folder of human-readable JSON tables with atomic writes and pure-Python text + cosine search. Published on [PyPI](https://pypi.org/project/neudb/) (0.4.0 live).
+A zero-dependency folder of human-readable JSON tables with atomic writes and pure-Python text + cosine search. Install from source (see Running Locally).
 
 ## What it is / is NOT
 
