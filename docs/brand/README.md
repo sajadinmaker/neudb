@@ -1,6 +1,6 @@
 # neuDB brand assets
 
-Canonical logo files for README, PyPI, GitHub, and the website.
+Canonical logo files for README, GitHub, and the website.
 
 | File | Use |
 |------|-----|

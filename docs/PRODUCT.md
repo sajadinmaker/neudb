@@ -58,7 +58,7 @@ docker run -p 8000:8000 -v ./data:/data -e NEUDB_API_DB=/data -e NEUDB_API_KEY=s
 
 ## 5. Deployment / operations
 
-- Library: install from source (`pip install -e .`); version in `pyproject.toml`; keep `CHANGELOG.md` in sync (the PyPI package was removed; re-publish via `python -m build && twine upload dist/*` if needed)
+- Library: install from source (`pip install -e .`); version in `pyproject.toml`; keep `CHANGELOG.md` in sync. PyPI distribution is retired (package delisted; account deleted) — do not script against it
 - API: Dockerfile (uvicorn, `HEALTHCHECK /health`); persist `NEUDB_DIR` volume; single-process only (no multi-process safety)
 - Limits (by design): full-file rewrite/read per op O(N); no index/pagination; ~10K rows/table ceiling; bare `json.load` (no repair); embeddings bloat JSON
 - Benchmarks (2026-09-14, Python 3.11): 2K rows 138 ins/s p50 7.3ms; 5K rows 56 ins/s p50 17.5ms; threaded 4×100 400/400
