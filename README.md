@@ -21,6 +21,12 @@ neuDB is embedded storage for local prototypes and LLM agents that need inspecta
 - `tests/test_recovery.py` — corrupted files, interrupted skipped writes, explicit commentary about guarantees
 - `docs/architecture.md` + `docs/storage.md` — what is guaranteed and what is not
 
+## Demo
+
+![neuDB quickstart demo](docs/demo.gif)
+
+Recorded live: quickstart commands creating a table, inserting two rows, listing them, then `cat`-ing the table's actual JSON file, followed by the full suite — `pytest -q` — passing 32 tests (0.96s measured in the recording).
+
 ## Problem
 
 Local prototypes and agents need inspectable persistence without running PostgreSQL.
