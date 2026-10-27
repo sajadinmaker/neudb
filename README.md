@@ -1,6 +1,25 @@
 # neuDB
 
-Lightweight embedded Python storage experiment exploring persistence, search, and AI memory.
+**A database you can read with your own eyes.** Plain JSON files for tables, crash-atomic writes, text and cosine search in pure Python, zero core dependencies.
+
+neuDB is embedded storage for local prototypes and LLM agents that need inspectable persistence without running PostgreSQL. It is deliberately NOT a PostgreSQL competitor: no server, no index, no transactions, no multi-process safety. Honest limits, documented in code and prose, because "works on my folder" beats debugging a pager you never hear.
+
+| | |
+|---|---|
+| Core | Python stdlib only, zero dependencies, `connect` / `Database` / `Table` API plus CLI |
+| Correctness | 32 tests: CRUD, persistence, search, API, AI schema, agent, concurrency, recovery |
+| Lint / CI | flake8 clean, suite green in CI |
+| Ceiling | ~10K rows per table by design (full-file rewrite per write, O(N) confirmed) |
+| Extras | `pip install -e ".[api,agent,test]"` — HTTP layer, agent memory schema, test kit |
+| License | MIT |
+
+**Where to look first**
+
+- `neudb/__init__.py` — the whole engine: `connect`, `Database`, `Table`; `cat *.json` is the debugger
+- `neudb/api.py` — optional FastAPI layer with Swagger docs, API-key auth, request-size validation
+- `neudb/agent.py` + `neudb/ai_schema.py` — AI memory tables (users, sessions, messages, memories)
+- `tests/test_recovery.py` — corrupted files, interrupted skipped writes, explicit commentary about guarantees
+- `docs/architecture.md` + `docs/storage.md` — what is guaranteed and what is not
 
 ## Problem
 
